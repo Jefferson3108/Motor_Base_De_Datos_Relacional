@@ -82,6 +82,34 @@ class BPlusTree:
             parent.keys.insert(index, key_to_move)
             parent.children.insert(index + 1, new_child)
             return None
+    
+    def search(self, key):
+        return self._search(self.root, key)
+
+    def _search(self, node, key):
+
+        if node is  None:
+            return None
+        if node.is_leaf:
+            for i, k in enumerate(node.keys):
+                if k == key:
+                 return node.records[i]
+            return None
+        else:
+                i = 0
+                while i < len(node.keys) and key >= node.keys[i]:
+                    i += 1
+                return self._search(node.children[i], key)
+tree= BPlusTree(order=3)
+for i in [10, 20, 5, 6, 12, 30, 25]:
+    tree.insert(i, f"Record {i}")
+
+print(tree.search(10))  # Output: Record 10
+print(tree.search(5))   # Output: Record 5
+print(tree.search(15))  # Output: None
+print(tree.search(30)) 
+print(tree.search(1)) # Output: Record 30
+               
 
             
 
