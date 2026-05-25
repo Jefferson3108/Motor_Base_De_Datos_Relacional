@@ -124,15 +124,152 @@ class BPlusTree:
         while i < len(node.keys) and key >= node.keys[i]:
             i += 1
         return self._search(node.children[i], key)
+    
+    def delete(self, key):
+        if self.root is None:
+            return  # árbol vacío, nada que eliminar
+        self._delete(self.root, key)
+        if len(self.root.keys) == 0 and not self.root.is_leaf:
+            # si la raíz quedó sin claves, hacer que el primer hijo sea la nueva raíz
+            self.root = self.root.children[0]
+        if len(self.root.keys) == 0 and self.root.is_leaf:
+            # si la raíz es una hoja vacía, eliminar el árbol
+            self.root = None
+    
+    def _delete(self, node, key):
+        if node.is_leaf:
+            # eliminar la clave y el registro asociado de la hoja
+            if key in node.keys:
+                index = node.keys.index(key)
+                del node.keys[index]
+                del node.records[index]
+            return
 
-tree = BPlusTree(5)
-for i in [10, 20, 5, 15, 25, 30, 1, 6, 12, 18]:
-    tree.insert(i, f"Record for {i}")
-print(tree.search(15))  # Output: Record for 15
-print(tree.search(100)) # Output: None (clave no encontrada)
-print(tree.search(1))   # Output: Record for 1
-print(tree.search(30))  # Output: Record for 30
-print(tree.search(7))   # Output: None (clave no encontrada)
+        # nodo interno: encontrar el hijo correcto para bajar
+        i = 0
+        while i < len(node.keys) and key >= node.keys[i]:
+            i += 1
+        # bajar al hijo correspondiente
+        self._delete(node.children[i], key)
+        #  después de eliminar, verificar si el hijo se quedó con muy pocas claves y necesita reequilibrio
+        if i < len(node.children) and len(node.children[i].keys) < self.order // 2:
+            self._rebalance(node, i)
+
+            
+        
+    def _rebalance(self, parent, index):
+        # intentar tomar prestado del hermano izquierdo
+        min_keys = self.order // 2
+        if index > 0 and len(parent.children[index - 1].keys) > min_keys:
+            left_sibling = parent.children[index - 1]
+            current = parent.children[index]
+            if current.is_leaf:
+                current.keys.insert(0, left_sibling.keys[-1])
+                current.records.insert(0, left_sibling.records[-1])
+                del left_sibling.keys[-1]
+                del left_sibling.records[-1]
+                parent.keys[index - 1] = current.keys[0]  # actualizar clave del padre
+            else:
+                current.keys.insert(0, parent.keys[index - 1])
+                current.children.insert(0, left_sibling.children.pop())
+                parent.keys[index - 1] = left_sibling.keys.pop()
+
+        # intentar tomar prestado del hermano derecho
+        elif index < len(parent.children) - 1 and len(parent.children[index + 1].keys) > min_keys:
+            right_sibling = parent.children[index + 1]
+            current = parent.children[index]
+            if current.is_leaf:
+                current.keys.insert(len(current.keys), right_sibling.keys[0])
+                current.records.insert(len(current.records), right_sibling.records[0])
+                del right_sibling.keys[0]
+                del right_sibling.records[0]
+                parent.keys[index] = right_sibling.keys[0]  # actualizar clave del padre
+            else:
+                current.keys.append(parent.keys[index])
+                current.children.append(right_sibling.children.pop(0))
+                parent.keys[index] = right_sibling.keys.pop(0)
+        else:
+
+
+             # si no se puede tomar prestado de ningún hermano, fusionar con un hermano
+             if index < len(parent.children) - 1:
+                 self._merge(parent, index)
+             else:
+                 self._merge(parent, index - 1)
+
+    def _merge(self, parent, index):
+       # index = posición de la hoja IZQUIERDA en parent.children
+       left  = parent.children[index]
+       right = parent.children[index + 1]
+
+       if left.is_leaf:
+            # --- merge de hojas ---
+
+            # 1. pasar todas las claves y records de la derecha a la izquierda
+            left.keys    += right.keys
+            left.records += right.records
+
+            # 2. actualizar el puntero next — la izquierda ahora apunta
+            #    a lo que apuntaba la derecha (saltamos la hoja que desaparece)
+            left.next = right.next
+
+            # 3. eliminar el separador del padre que dividía las dos hojas
+            del parent.keys[index]
+
+            # 4. eliminar la hoja derecha del padre (ya no existe)
+            del parent.children[index + 1]
+
+       else:
+         # --- merge de nodos internos ---
+
+         # 1. bajar el separador del padre al nodo izquierdo
+         #    (necesario porque los hijos del derecho necesitan un separador)
+         left.keys.append(parent.keys[index])
+
+         # 2. pasar todas las claves del derecho al izquierdo
+         left.keys += right.keys
+
+         # 3. pasar todos los hijos del derecho al izquierdo
+         left.children += right.children
+
+         # 4. eliminar el separador del padre
+         del parent.keys[index]
+
+         # 5. eliminar el nodo derecho del padre
+         del parent.children[index + 1]
+
+
+
+tree = BPlusTree(order=3)
+for i in [10, 20, 5, 6, 12, 30, 25]:
+    tree.insert(i, f"Record {i}")
+
+# caso 1 — eliminar sin déficit
+tree.delete(12)
+print(tree.search(12))   # None
+print(tree.search(10))   # Record 10 ← vecino intacto
+
+# caso 2 — eliminar con préstamo
+tree.delete(10)
+print(tree.search(10))   # None
+print(tree.search(6))    # Record 6  ← debe seguir
+
+# caso 3 — eliminar con merge
+tree.delete(5)
+print(tree.search(5))    # None
+print(tree.search(6))    # Record 6  ← debe seguir
+
+# eliminar algo que no existe
+tree.delete(99)          # no debe explotar
+
+# eliminar todo
+for i in [6, 20, 25, 30]:
+    tree.delete(i)
+print(tree.search(30))   # None
+print(tree.root)         # None o hoja vacía
+
+
+
                
 
             
