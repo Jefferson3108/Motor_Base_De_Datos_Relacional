@@ -237,6 +237,23 @@ class BPlusTree:
 
          # 5. eliminar el nodo derecho del padre
          del parent.children[index + 1]
+    
+    def update(self, key, new_record):
+        # actualizar el registro asociado a una clave existente
+        node = self.root
+        while node is not None:
+            if node.is_leaf:
+                for i, k in enumerate(node.keys):
+                    if k == key:
+                        node.records[i] = new_record
+                        return True  # actualización exitosa
+                return False  # clave no encontrada
+            else:
+                i = 0
+                while i < len(node.keys) and key >= node.keys[i]:
+                    i += 1
+                node = node.children[i]  # seguir bajando al hijo correcto
+        return False  # clave no encontrada
 
 
 
@@ -262,11 +279,8 @@ print(tree.search(6))    # Record 6  ← debe seguir
 # eliminar algo que no existe
 tree.delete(99)          # no debe explotar
 
-# eliminar todo
-for i in [6, 20, 25, 30]:
-    tree.delete(i)
-print(tree.search(30))   # None
-print(tree.root)         # None o hoja vacía
+tree.update(6, "Updated Record 6")
+print(tree.search(6))    # Updated Record 6
 
 
 
