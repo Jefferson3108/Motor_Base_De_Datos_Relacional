@@ -1,13 +1,10 @@
-# lexer.py
-
 import re
 
-# ─────────────────────────────────────────────────────────────
 # TIPOS DE TOKENS
 # Cada entrada es: nombre → patrón regex
 # El orden importa: KEYWORD debe ir antes de IDENTIFIER
 # para que "SELECT" no sea clasificado como identificador.
-# ─────────────────────────────────────────────────────────────
+
 TOKEN_TYPES = {
     'KEYWORD':    r'\b(SELECT|INSERT|UPDATE|DELETE|FROM|WHERE|INTO|VALUES|SET|CREATE|DROP|TABLE|AND|OR)\b',
     'IDENTIFIER': r'[a-zA-Z_][a-zA-Z0-9_]*',   # nombres de tablas y columnas
