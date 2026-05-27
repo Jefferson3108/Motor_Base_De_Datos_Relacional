@@ -1,22 +1,30 @@
 from Tree import BPlusTree
 from lexer     import Lexer
 from parser    import Parser
+from catalog   import Catalog
 
 class DatabaseEngine:
     """
     Motor de base de datos. Mantiene un conjunto de tablas en memoria,
     cada una indexada por un árbol B+.
-    
+
     Flujo de una consulta:
       1. execute(sql)  → llama al Lexer y al Parser
       2. dispatch(ast) → decide qué operación ejecutar
       3. do_*(ast)     → ejecuta contra el árbol B+ correspondiente
+
+    El catálogo (self.catalog) se mantiene sincronizado automáticamente:
+      - do_create registra la tabla y sus columnas
+      - do_drop   elimina la entrada del catálogo
     """
 
     def __init__(self):
         # Diccionario de tablas: nombre (str) → BPlusTree
         # Cada tabla es un árbol B+ independiente
         self.tables = {}
+
+        # Catálogo del sistema: guarda metadatos (columnas y tipos)
+        self.catalog = Catalog()
 
     # ══════════════════════════════════════════════════════════
     # PUNTO DE ENTRADA PRINCIPAL
@@ -56,23 +64,28 @@ class DatabaseEngine:
 
     def do_create(self, ast):
         """
-        CREATE TABLE: crea un nuevo árbol B+ para la tabla.
+        CREATE TABLE: crea un nuevo árbol B+ para la tabla y la registra
+        en el catálogo con sus columnas y tipos.
         Falla si la tabla ya existe (no sobrescribir datos).
         """
         if ast.table in self.tables:
             return f"[Error] La tabla '{ast.table}' ya existe"
         # orden=4 significa máximo 4 claves por nodo en el árbol B+
         self.tables[ast.table] = BPlusTree(order=4)
+        # registrar metadatos en el catálogo
+        self.catalog.register_table(ast.table, ast.columns)
         return f"Tabla '{ast.table}' creada exitosamente."
 
     def do_drop(self, ast):
         """
-        DROP TABLE: elimina el árbol B+ y todos sus datos.
+        DROP TABLE: elimina el árbol B+ y todos sus datos, y borra la
+        entrada del catálogo.
         Falla si la tabla no existe.
         """
         if ast.table not in self.tables:
             return f"[Error] La tabla '{ast.table}' no existe"
         del self.tables[ast.table]
+        self.catalog.drop_table(ast.table)
         return f"Tabla '{ast.table}' eliminada."
 
     # ══════════════════════════════════════════════════════════
