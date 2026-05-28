@@ -1,3 +1,6 @@
+import json
+import os
+from pathlib import Path
 class Catalog:
     """
     Catálogo del sistema (system catalog).
@@ -17,10 +20,28 @@ class Catalog:
         catalog.drop_table('usuarios')
     """
 
-    def __init__(self):
+    def __init__(self, path: str = "data/catalog.json"):
         # Diccionario: nombre_tabla (str) → lista de (nombre_col, tipo_col)
-        self._tables: dict[str, list[tuple[str, str]]] = {}
+        self.path = Path(path)
+        self._tables: dict[str, list[dict]] = {}
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        if not self.path.exists():
+            self.path.write_text("{}")  # inicia con catálogo vacío
+        self.load()
 
+
+    
+    def load(self)-> None:
+        "Carga el catálogo desde un archivo JSON." 
+        with open(self.path, 'r',encoding='utf-8') as f:
+            self._tables = json.load(f)
+    
+    def save(self) -> None:
+        print("Guardando catálogo en disco...")
+        print(self._tables)
+        with open(self.path, 'w', encoding='utf-8') as f:
+             json.dump(self._tables, f, indent=2)
+        
     # ══════════════════════════════════════════════════════════
     # REGISTRO Y ELIMINACIÓN
     # ══════════════════════════════════════════════════════════
@@ -43,9 +64,13 @@ class Catalog:
         ValueError
             Si la tabla ya estaba registrada.
         """
+        print("REGISTER_TABLE INICIADO")
+        print("TABLA:", table_name)
+        print("TABLES:", self._tables)
         if table_name in self._tables:
             raise ValueError(f"La tabla '{table_name}' ya existe en el catálogo.")
-        self._tables[table_name] = [(col['name'], col['type']) for col in columns]
+        self._tables[table_name] = columns
+        self.save()  # guardar cambios inmediatamente
 
     def drop_table(self, table_name: str) -> None:
         """
@@ -59,6 +84,7 @@ class Catalog:
         if table_name not in self._tables:
             raise KeyError(f"La tabla '{table_name}' no existe en el catálogo.")
         del self._tables[table_name]
+        self.save()  # guardar cambios inmediatamente
 
     # ══════════════════════════════════════════════════════════
     # CONSULTAS
@@ -105,15 +131,15 @@ class Catalog:
         """
         columns = self.get_columns(table_name)  # lanza KeyError si no existe
 
-        col_w  = max(len('Columna'), max(len(c[0]) for c in columns))
-        type_w = max(len('Tipo'),    max(len(c[1]) for c in columns))
+        col_w  = max(len('Columna'), max(len(c['name']) for c in columns))
+        type_w = max(len('Tipo'),    max(len(c['type']) for c in columns))
 
         sep_top = f"┌{'─' * (col_w + 2)}┬{'─' * (type_w + 2)}┐"
         sep_mid = f"├{'─' * (col_w + 2)}┼{'─' * (type_w + 2)}┤"
         sep_bot = f"└{'─' * (col_w + 2)}┴{'─' * (type_w + 2)}┘"
 
         header = f"│ {'Columna':<{col_w}} │ {'Tipo':<{type_w}} │"
-        rows   = [f"│ {c[0]:<{col_w}} │ {c[1]:<{type_w}} │" for c in columns]
+        rows   = [f"│ {c['name']:<{col_w}} │ {c['type']:<{type_w}} │" for c in columns]
 
         lines = [
             f"Tabla: {table_name}",
@@ -139,6 +165,6 @@ class Catalog:
 
         lines = [f"Tablas registradas ({len(self._tables)}):"]
         for name, cols in self._tables.items():
-            col_names = ', '.join(c[0] for c in cols)
+            col_names = ', '.join(c['name'] for c in cols)
             lines.append(f"  • {name}  ({col_names})")
         return '\n'.join(lines)

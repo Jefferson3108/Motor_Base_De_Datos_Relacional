@@ -1,4 +1,4 @@
-from engine import DatabaseEngine
+from .engine import DatabaseEngine
 
 # ─────────────────────────────────────────────────────────────
 # Comandos especiales disponibles en el REPL

@@ -157,7 +157,7 @@ class BPlusTree:
 
             # Actualizar raíz
             self.root = new_root
-            
+
 
     def insert_non_full(self, node, key, record):
         """
@@ -178,9 +178,7 @@ class BPlusTree:
                 Registro asociado.
         """
 
-        # =========================
         # Inserción en hoja
-        # =========================
         if node.is_leaf:
 
             # Buscar posición ordenada
@@ -193,9 +191,8 @@ class BPlusTree:
             node.keys.insert(i, key)
             node.records.insert(i, record)
 
-        # =========================
+        
         # Inserción en nodo interno
-        # =========================
         else:
 
             # Buscar hijo correcto
@@ -238,9 +235,7 @@ class BPlusTree:
 
         full_child = parent.children[index]
 
-        # ==================================================
         # División de nodo hoja
-        # ==================================================
         if full_child.is_leaf:
 
             """
@@ -605,65 +600,6 @@ class BPlusTree:
                     i += 1
                 node = node.children[i]
         return False
-
-
-# ==========================================================
-# PRUEBAS
-# ==========================================================
-
-# Crear árbol B+
-tree = BPlusTree(order=3)
-
-# Insertar datos
-for i in [10, 20, 5, 6, 12, 30, 25]:
-
-    tree.insert(i, f"Record {i}")
-
-# ==========================================================
-# Caso 1:
-# Eliminación simple
-# ==========================================================
-
-tree.delete(12)
-
-print(tree.search(12))   # None
-print(tree.search(10))   # Record 10
-
-# ==========================================================
-# Caso 2:
-# Eliminación con préstamo
-# ==========================================================
-
-tree.delete(10)
-
-print(tree.search(10))   # None
-print(tree.search(6))    # Record 6
-
-# ==========================================================
-# Caso 3:
-# Eliminación con merge
-# ==========================================================
-
-tree.delete(5)
-
-print(tree.search(5))    # None
-print(tree.search(6))    # Record 6
-
-# ==========================================================
-# Eliminar clave inexistente
-# ==========================================================
-
-tree.delete(99)
-
-
-# Actualización
-
-
-tree.update(6, "Updated Record 6")
-
-print(tree.search(6))
-# Updated Record 6  # Updated Record 6
-
 
 
                

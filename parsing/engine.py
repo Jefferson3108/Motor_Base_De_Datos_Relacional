@@ -1,7 +1,8 @@
-from Tree import BPlusTree
-from lexer     import Lexer
-from parser    import Parser
-from Catalog.catalog   import Catalog
+from catalog.catalog import Catalog
+from tree.BPlusTree import BPlusTree
+from .lexer import Lexer
+from .parser import Parser
+from catalog.catalog import Catalog
 
 class DatabaseEngine:
     """
@@ -22,9 +23,11 @@ class DatabaseEngine:
         # Diccionario de tablas: nombre (str) → BPlusTree
         # Cada tabla es un árbol B+ independiente
         self.tables = {}
-
         # Catálogo del sistema: guarda metadatos (columnas y tipos)
-        self.catalog = Catalog()
+        self.catalog = Catalog("data/catalog.json")
+        # Al iniciar el motor, cargamos las tablas existentes del catálogo
+        for table_name in self.catalog._tables:
+            self.tables[table_name] = BPlusTree(order=4)
 
     # ══════════════════════════════════════════════════════════
     # PUNTO DE ENTRADA PRINCIPAL
