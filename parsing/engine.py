@@ -1,7 +1,7 @@
 from Tree import BPlusTree
 from lexer     import Lexer
 from parser    import Parser
-from catalog   import Catalog
+from Catalog.catalog   import Catalog
 
 class DatabaseEngine:
     """

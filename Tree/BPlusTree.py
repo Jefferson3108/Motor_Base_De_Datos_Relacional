@@ -1,286 +1,668 @@
 class BPlusNode:
+    """
+    Nodo base utilizado en la implementación del árbol B+.
+
+    Este nodo puede representar:
+    - Un nodo interno
+    - Un nodo hoja
+
+    Atributos:
+        order (int):
+            Número máximo de claves permitidas en el nodo.
+
+        is_leaf (bool):
+            Indica si el nodo es hoja.
+            - True  -> nodo hoja
+            - False -> nodo interno
+
+        keys (list):
+            Lista de claves almacenadas en el nodo.
+
+            En nodos internos:
+                Se utilizan como claves separadoras
+                para dirigir la búsqueda.
+
+            En nodos hoja:
+                Son las claves reales almacenadas.
+
+        children (list):
+            Lista de referencias a nodos hijos.
+            Solo se utiliza en nodos internos.
+
+        next (BPlusNode):
+            Referencia a la siguiente hoja del árbol.
+
+            Este puntero permite realizar:
+            - búsquedas por rango
+            - recorridos secuenciales eficientes
+    """
+
     def __init__(self, order, leaf=False):
-        self.order = order      # máximo de claves permitidas en el nodo
-        self.is_leaf = leaf     # True si es hoja, False si es nodo interno
-        self.keys = []          # claves de enrutamiento (nodo interno) o de datos (hoja)
-        self.children = []      # punteros a nodos hijos (solo nodos internos)
-        self.next = None        # puntero a la siguiente hoja (solo hojas, para range scan)
+
+        # Número máximo de claves permitidas
+        self.order = order
+
+        # Define si el nodo es hoja o interno
+        self.is_leaf = leaf
+
+        # Claves almacenadas en el nodo
+        self.keys = []
+
+        # Hijos del nodo (solo nodos internos)
+        self.children = []
+
+        # Puntero a la siguiente hoja
+        self.next = None
 
 
 class BPlusleafNode(BPlusNode):
+    """
+    Representa un nodo hoja del árbol B+.
+
+    Los nodos hoja almacenan:
+    - claves reales
+    - registros asociados a cada clave
+
+    Además, las hojas se encuentran enlazadas
+    secuencialmente mediante el atributo `next`,
+    permitiendo búsquedas por rango eficientes.
+    """
+
     def __init__(self, order):
+
+        # Inicializar como nodo hoja
         super().__init__(order=order, leaf=True)
-        self.records = []       # valores asociados a cada clave (solo hojas)
+
+        # Registros asociados a cada clave
+        self.records = []
 
 
 class BPlusTree:
+    """
+    Implementación de un árbol B+.
+
+    Características:
+    - Inserción de claves
+    - Búsqueda de registros
+    - Eliminación de claves
+    - Actualización de registros
+    - División de nodos
+    - Rebalanceo automático
+    - Fusión de nodos
+
+    El árbol B+ mantiene todas las claves reales
+    almacenadas únicamente en las hojas.
+
+    Los nodos internos funcionan únicamente
+    como estructuras de navegación.
+    """
+
     def __init__(self, order):
-        self.root = None        # raíz del árbol, None si está vacío
-        self.order = order      # orden del árbol: máximo de claves por nodo
+        """
+        Inicializa un árbol B+ vacío.
+
+        Args:
+            order (int):
+                Máximo número de claves permitidas
+                en cada nodo.
+        """
+
+        # Raíz del árbol
+        self.root = None
+
+        # Orden del árbol
+        self.order = order
 
     def insert(self, key, record):
-        # si el árbol está vacío, crear la primera hoja como raíz
+        """
+        Inserta una nueva clave junto con su registro asociado.
+
+        Flujo general:
+        1. Si el árbol está vacío, crear una hoja raíz.
+        2. Insertar recursivamente.
+        3. Si la raíz se desborda, dividirla.
+        4. Crear una nueva raíz.
+
+        Args:
+            key:
+                Clave que será insertada.
+
+            record:
+                Registro asociado a la clave.
+        """
+        # Caso especial:
+        # árbol vacío
         if self.root is None:
+
             self.root = BPlusleafNode(self.order)
             self.root.keys.append(key)
             self.root.records.append(record)
             return
 
-        # insertar en el subárbol correspondiente
+        # Insertar en el subárbol correspondiente
         self.insert_non_full(self.root, key, record)
 
-        # si la raíz se desbordó, crear una nueva raíz y dividir
-        # este es el único momento en que el árbol crece en altura
+        # Si la raíz excede el tamaño permitido,
+        # el árbol aumenta su altura
         if len(self.root.keys) >= self.order:
+
+            # Crear nueva raíz
             new_root = BPlusNode(self.order)
+
+            # La raíz anterior se convierte en hijo
             new_root.children.append(self.root)
+
+            # Dividir antigua raíz
             self.split_child_Tree_BPlus(new_root, 0)
+
+            # Actualizar raíz
             self.root = new_root
+            
 
     def insert_non_full(self, node, key, record):
+        """
+        Inserta una clave en un nodo que todavía
+        tiene espacio disponible.
+
+        Si durante el descenso un hijo está lleno,
+        se divide antes de continuar.
+
+        Args:
+            node:
+                Nodo actual.
+
+            key:
+                Clave a insertar.
+
+            record:
+                Registro asociado.
+        """
+
+        # =========================
+        # Inserción en hoja
+        # =========================
         if node.is_leaf:
-            # encontrar la posición correcta para mantener las claves ordenadas
+
+            # Buscar posición ordenada
             i = 0
+
             while i < len(node.keys) and node.keys[i] < key:
                 i += 1
+
+            # Insertar clave y registro
             node.keys.insert(i, key)
             node.records.insert(i, record)
+
+        # =========================
+        # Inserción en nodo interno
+        # =========================
         else:
-            # encontrar el hijo al que le corresponde esta clave
+
+            # Buscar hijo correcto
             i = len(node.keys) - 1
+
             while i >= 0 and key < node.keys[i]:
                 i -= 1
+
             i += 1
 
-            # si el hijo está lleno, dividirlo antes de bajar
+            # Si el hijo está lleno,
+            # dividir antes de bajar
             if len(node.children[i].keys) >= self.order:
+
                 self.split_child_Tree_BPlus(node, i)
-                # después del split el padre tiene una clave nueva
-                # determinar a cuál de los dos hijos resultantes bajar
+
+                # Determinar cuál de los dos hijos
+                # resultantes debe recibir la clave
                 if key > node.keys[i]:
                     i += 1
 
+            # Continuar recursivamente
             self.insert_non_full(node.children[i], key, record)
 
     def split_child_Tree_BPlus(self, parent, index):
+        """
+        Divide un hijo lleno en dos nodos.
+
+        Existen dos casos:
+        - División de hoja
+        - División de nodo interno
+
+        Args:
+            parent:
+                Nodo padre del nodo a dividir.
+
+            index:
+                Posición del hijo dentro del padre.
+        """
+
         full_child = parent.children[index]
 
+        # ==================================================
+        # División de nodo hoja
+        # ==================================================
         if full_child.is_leaf:
-            # --- split de hoja ---
-            # la clave del medio se COPIA al padre (queda en ambas hojas)
+
+            """
+            En hojas:
+            - la clave central NO desaparece
+            - se copia al padre
+            """
+
             mid = len(full_child.keys) // 2
 
+            # Crear nueva hoja
             new_child = BPlusleafNode(self.order)
-            # la mitad derecha va a la nueva hoja
-            new_child.keys    = full_child.keys[mid:]
+
+            # Mitad derecha
+            new_child.keys = full_child.keys[mid:]
             new_child.records = full_child.records[mid:]
-            # la mitad izquierda queda en la hoja original
-            full_child.keys    = full_child.keys[:mid]
+
+            # Mitad izquierda
+            full_child.keys = full_child.keys[:mid]
             full_child.records = full_child.records[:mid]
 
-            # la primera clave de la nueva hoja sube al padre como separador
+            # Primera clave de la nueva hoja
+            # sube al padre
             key_to_move = new_child.keys[0]
+
             parent.keys.insert(index, key_to_move)
             parent.children.insert(index + 1, new_child)
 
-            # mantener la lista enlazada de hojas actualizada
+            # Actualizar lista enlazada de hojas
             new_child.next = full_child.next
             full_child.next = new_child
 
+
+        # División de nodo interno
         else:
-            # --- split de nodo interno ---
-            # la clave del medio se MUEVE al padre (no queda en ningún hijo)
+
+            """
+            En nodos internos:
+            - la clave central sube al padre
+            - desaparece de los hijos
+            """
+
             mid = len(full_child.keys) // 2
+
+            # Clave que subirá al padre
             key_to_move = full_child.keys[mid]
 
+            # Crear nuevo nodo interno
             new_child = BPlusNode(self.order)
+
             new_child.is_leaf = False
-            # claves y hijos a la derecha del medio van al nuevo nodo
-            new_child.keys     = full_child.keys[mid + 1:]
+
+            # Mitad derecha
+            new_child.keys = full_child.keys[mid + 1:]
             new_child.children = full_child.children[mid + 1:]
-            # claves y hijos a la izquierda del medio quedan en el original
-            full_child.keys     = full_child.keys[:mid]
+
+            # Mitad izquierda
+            full_child.keys = full_child.keys[:mid]
             full_child.children = full_child.children[:mid + 1]
 
+            # Insertar en padre
             parent.keys.insert(index, key_to_move)
             parent.children.insert(index + 1, new_child)
 
     def search(self, key):
+        """
+        Busca un registro asociado a una clave.
+
+        Args:
+            key:
+                Clave a buscar.
+
+        Returns:
+            Registro asociado si existe.
+            None en caso contrario.
+        """
+
         return self._search(self.root, key)
 
     def _search(self, node, key):
+        """
+        Método recursivo de búsqueda.
+
+        Args:
+            node:
+                Nodo actual.
+
+            key:
+                Clave buscada.
+
+        Returns:
+            Registro encontrado o None.
+        """
+
+        # Árbol vacío
         if node is None:
             return None
 
+        # Buscar en hoja
         if node.is_leaf:
-            # buscar linealmente en la hoja — las claves están ordenadas
+            # Búsqueda lineal
             for i, k in enumerate(node.keys):
                 if k == key:
                     return node.records[i]
-            return None  # clave no encontrada
+            return None
 
-        # nodo interno: encontrar el hijo correcto y bajar
+        
+        # Buscar en nodo interno
         i = 0
         while i < len(node.keys) and key >= node.keys[i]:
             i += 1
         return self._search(node.children[i], key)
     
+
     def delete(self, key):
+        """
+        Elimina una clave del árbol.
+
+        Después de eliminar:
+        - se verifica déficit
+        - se rebalancea si es necesario
+        - se ajusta la raíz si queda vacía
+
+        Args:
+            key:
+                Clave a eliminar.
+        """
+
+        # Árbol vacío
         if self.root is None:
-            return  # árbol vacío, nada que eliminar
+            return
+
+        # Eliminar recursivamente
         self._delete(self.root, key)
+
+        # Si la raíz quedó vacía
+        # y tiene hijos,
+        # reducir altura del árbol
         if len(self.root.keys) == 0 and not self.root.is_leaf:
-            # si la raíz quedó sin claves, hacer que el primer hijo sea la nueva raíz
+
             self.root = self.root.children[0]
+
+        # Si la raíz es hoja vacía,
+        # el árbol queda vacío
         if len(self.root.keys) == 0 and self.root.is_leaf:
-            # si la raíz es una hoja vacía, eliminar el árbol
+
             self.root = None
-    
+
     def _delete(self, node, key):
+        """
+        Método recursivo de eliminación.
+
+        Args:
+            node:
+                Nodo actual.
+
+            key:
+                Clave a eliminar.
+        """
+
+        # Eliminación en hoja
         if node.is_leaf:
-            # eliminar la clave y el registro asociado de la hoja
+
             if key in node.keys:
                 index = node.keys.index(key)
                 del node.keys[index]
                 del node.records[index]
             return
 
-        # nodo interno: encontrar el hijo correcto para bajar
+        
+        # Descender en nodo interno
         i = 0
         while i < len(node.keys) and key >= node.keys[i]:
             i += 1
-        # bajar al hijo correspondiente
+
+        # Continuar eliminación
         self._delete(node.children[i], key)
-        #  después de eliminar, verificar si el hijo se quedó con muy pocas claves y necesita reequilibrio
-        if i < len(node.children) and len(node.children[i].keys) < self.order // 2:
+
+        # Verificar déficit
+        if (
+            i < len(node.children)
+            and len(node.children[i].keys) < self.order // 2
+        ):
             self._rebalance(node, i)
 
-            
-        
     def _rebalance(self, parent, index):
-        # intentar tomar prestado del hermano izquierdo
+        """
+        Rebalancea un nodo con déficit.
+
+        Estrategias:
+        1. Pedir prestado al hermano izquierdo.
+        2. Pedir prestado al hermano derecho.
+        3. Fusionar nodos.
+
+        Args:
+            parent:
+                Nodo padre.
+
+            index:
+                Posición del hijo con déficit.
+        """
+
         min_keys = self.order // 2
-        if index > 0 and len(parent.children[index - 1].keys) > min_keys:
+
+        # Intentar préstamo del hermano izquierdo
+        if (
+            index > 0
+            and len(parent.children[index - 1].keys) > min_keys
+        ):
+
             left_sibling = parent.children[index - 1]
             current = parent.children[index]
+
+            
+            # Préstamo en hoja
             if current.is_leaf:
+
                 current.keys.insert(0, left_sibling.keys[-1])
                 current.records.insert(0, left_sibling.records[-1])
+
                 del left_sibling.keys[-1]
                 del left_sibling.records[-1]
-                parent.keys[index - 1] = current.keys[0]  # actualizar clave del padre
+
+                # Actualizar separador del padre
+                parent.keys[index - 1] = current.keys[0]
+
+            # Préstamo en nodo interno
             else:
+
                 current.keys.insert(0, parent.keys[index - 1])
-                current.children.insert(0, left_sibling.children.pop())
+
+                current.children.insert(
+                    0,
+                    left_sibling.children.pop()
+                )
+
                 parent.keys[index - 1] = left_sibling.keys.pop()
 
-        # intentar tomar prestado del hermano derecho
-        elif index < len(parent.children) - 1 and len(parent.children[index + 1].keys) > min_keys:
+        # Intentar préstamo del hermano derecho
+        elif (
+            index < len(parent.children) - 1
+            and len(parent.children[index + 1].keys) > min_keys
+        ):
+
             right_sibling = parent.children[index + 1]
             current = parent.children[index]
+
+            # --------------------------
+            # Préstamo en hoja
+            # --------------------------
             if current.is_leaf:
-                current.keys.insert(len(current.keys), right_sibling.keys[0])
-                current.records.insert(len(current.records), right_sibling.records[0])
+                current.keys.append(right_sibling.keys[0])
+
+                current.records.append(
+                    right_sibling.records[0]
+                )
+
                 del right_sibling.keys[0]
                 del right_sibling.records[0]
-                parent.keys[index] = right_sibling.keys[0]  # actualizar clave del padre
+
+                # Actualizar separador
+                parent.keys[index] = right_sibling.keys[0]
+ 
+            # Préstamo en nodo interno
             else:
+
                 current.keys.append(parent.keys[index])
-                current.children.append(right_sibling.children.pop(0))
+
+                current.children.append(
+                    right_sibling.children.pop(0)
+                )
+
                 parent.keys[index] = right_sibling.keys.pop(0)
+
+        # Si no se puede prestar:
+        # fusionar   
         else:
 
+            if index < len(parent.children) - 1:
+                self._merge(parent, index)
 
-             # si no se puede tomar prestado de ningún hermano, fusionar con un hermano
-             if index < len(parent.children) - 1:
-                 self._merge(parent, index)
-             else:
-                 self._merge(parent, index - 1)
+            else:
+                self._merge(parent, index - 1)
 
     def _merge(self, parent, index):
-       # index = posición de la hoja IZQUIERDA en parent.children
-       left  = parent.children[index]
-       right = parent.children[index + 1]
+        """
+        Fusiona dos nodos hermanos.
 
-       if left.is_leaf:
-            # --- merge de hojas ---
+        Args:
+            parent:
+                Nodo padre.
 
-            # 1. pasar todas las claves y records de la derecha a la izquierda
-            left.keys    += right.keys
+            index:
+                Posición del hijo izquierdo.
+        """
+
+        left = parent.children[index]
+        right = parent.children[index + 1]
+
+        # Merge de hojas
+        if left.is_leaf:
+
+            # Mover claves y registros
+            left.keys += right.keys
             left.records += right.records
 
-            # 2. actualizar el puntero next — la izquierda ahora apunta
-            #    a lo que apuntaba la derecha (saltamos la hoja que desaparece)
+            # Actualizar lista enlazada
             left.next = right.next
 
-            # 3. eliminar el separador del padre que dividía las dos hojas
+            # Eliminar separador del padre
             del parent.keys[index]
 
-            # 4. eliminar la hoja derecha del padre (ya no existe)
+            # Eliminar hijo derecho
             del parent.children[index + 1]
 
-       else:
-         # --- merge de nodos internos ---
+        # Merge de nodos internos
+        else:
 
-         # 1. bajar el separador del padre al nodo izquierdo
-         #    (necesario porque los hijos del derecho necesitan un separador)
-         left.keys.append(parent.keys[index])
+            # Bajar separador del padre
+            left.keys.append(parent.keys[index])
 
-         # 2. pasar todas las claves del derecho al izquierdo
-         left.keys += right.keys
+            # Transferir claves
+            left.keys += right.keys
 
-         # 3. pasar todos los hijos del derecho al izquierdo
-         left.children += right.children
+            # Transferir hijos
+            left.children += right.children
 
-         # 4. eliminar el separador del padre
-         del parent.keys[index]
+            # Eliminar separador
+            del parent.keys[index]
 
-         # 5. eliminar el nodo derecho del padre
-         del parent.children[index + 1]
-    
+            # Eliminar hijo derecho
+            del parent.children[index + 1]
+
     def update(self, key, new_record):
-        # actualizar el registro asociado a una clave existente
+        """
+        Actualiza el registro asociado a una clave.
+
+        Args:
+            key:
+                Clave a actualizar.
+
+            new_record:
+                Nuevo valor asociado.
+
+        Returns:
+            True si la actualización fue exitosa.
+            False si la clave no existe.
+        """
         node = self.root
         while node is not None:
+            # Buscar en hoja
             if node.is_leaf:
                 for i, k in enumerate(node.keys):
                     if k == key:
                         node.records[i] = new_record
-                        return True  # actualización exitosa
-                return False  # clave no encontrada
+                        return True
+                return False
+            # Descender
             else:
                 i = 0
                 while i < len(node.keys) and key >= node.keys[i]:
                     i += 1
-                node = node.children[i]  # seguir bajando al hijo correcto
-        return False  # clave no encontrada
+                node = node.children[i]
+        return False
 
 
+# ==========================================================
+# PRUEBAS
+# ==========================================================
 
+# Crear árbol B+
 tree = BPlusTree(order=3)
+
+# Insertar datos
 for i in [10, 20, 5, 6, 12, 30, 25]:
+
     tree.insert(i, f"Record {i}")
 
-# caso 1 — eliminar sin déficit
+# ==========================================================
+# Caso 1:
+# Eliminación simple
+# ==========================================================
+
 tree.delete(12)
+
 print(tree.search(12))   # None
-print(tree.search(10))   # Record 10 ← vecino intacto
+print(tree.search(10))   # Record 10
 
-# caso 2 — eliminar con préstamo
+# ==========================================================
+# Caso 2:
+# Eliminación con préstamo
+# ==========================================================
+
 tree.delete(10)
+
 print(tree.search(10))   # None
-print(tree.search(6))    # Record 6  ← debe seguir
+print(tree.search(6))    # Record 6
 
-# caso 3 — eliminar con merge
+# ==========================================================
+# Caso 3:
+# Eliminación con merge
+# ==========================================================
+
 tree.delete(5)
-print(tree.search(5))    # None
-print(tree.search(6))    # Record 6  ← debe seguir
 
-# eliminar algo que no existe
-tree.delete(99)          # no debe explotar
+print(tree.search(5))    # None
+print(tree.search(6))    # Record 6
+
+# ==========================================================
+# Eliminar clave inexistente
+# ==========================================================
+
+tree.delete(99)
+
+
+# Actualización
+
 
 tree.update(6, "Updated Record 6")
-print(tree.search(6))    # Updated Record 6
+
+print(tree.search(6))
+# Updated Record 6  # Updated Record 6
 
 
 
