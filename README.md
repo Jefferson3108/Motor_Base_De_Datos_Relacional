@@ -1,7 +1,12 @@
 # Motor de base de datos usando arbol b+ #
-## Descripcion del proyecto ##
+## 1. Integrantes##
+Jefferson David Rico Ruiz 20242020108
+Kevin Sebastian Correo Buritica 20241020075
+Kevin Felipe Vargas Farfan 20242020259
+
+## 2. Descripcion del proyecto ##
 Este proyecto es motor de base de datos utilizando un arbol b+ para el proceso de insercion, consulta, eliminacion y actualizacion de registros garantizando una complejidad en las operaciones de O(log(n)). Las operaciones que soporta la base de datos son:
-## Operacion soportadas ##
+## 3. Operacion soportadas ##
 1. Creacion de tablas con nombre, los nombres de las columnas y el tipo de dato que van albergar
 2. Insercion de registros indicando a la tabla donde se quiere ingresar, el Id o la clave que se le va asignar y los valores asociados a cada tabla
 3. Actualizacion de cualquiera de los campos de un registro, ingresando la tabla, el campo que se quiere actualizar y el id asociado al registro
@@ -10,7 +15,7 @@ Este proyecto es motor de base de datos utilizando un arbol b+ para el proceso d
 6. Eliminacion de registro indicando la tabla donde se quiere eliminar, ingresando el id asociado al registro
 7. Eliminacion de tablas indicando el nombre de la tabla que se requiere eliminar
 
-## Instrucciones de ejecuccion ## 
+## 4. Instrucciones de ejecuccion ## 
 Ejecutar los siguientes comandos en la terminal 
 1. Clonar repositorio: ``git clone https://github.com/Jefferson3108/Motor_Base_De_Datos_Relacional``
 2. Crear entorno: ``python -m venv .venv`` en windows, En macOS/Linux ``python3 -m ven .venv``
@@ -19,7 +24,7 @@ Ejecutar los siguientes comandos en la terminal
 5. Ejecuccion: en la terminal escribir ``python -m parsing.repl``
 6. Ejecuccion pruebas unitarias ``pytest -v``
 
-## Ejemplos de comandos ##
+## 5. Ejemplos de comandos ##
 1. Para crear una tabla
 
 - ``CREATE TABLE estudiantes(Id int, nombre str, edad int)``
