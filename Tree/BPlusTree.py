@@ -600,6 +600,75 @@ class BPlusTree:
                     i += 1
                 node = node.children[i]
         return False
+    def range_search(self, key_start, key_end):
+        """
+        Retorna todos los registros cuyas claves 
+        estén dentro del rango [key_start, key_end].
+        """
+        results=[]
+        node=self.root
+        # Descender hasta la hoja que podría contener key_start
+        if node is None:
+            return results
+        while not node.is_leaf:
+            i=0
+            while i<len(node.keys) and key_start>=node.keys[i]:
+                i+=1
+            node=node.children[i]
+        # Recorrer hojas enlazadas hasta superar key_end
+        while node is not None:
+            for i, key in enumerate(node.keys):
+                if key> key_end:
+                    return results
+                if key>=key_start:
+                    results.append(node.records[i])
+            node=node.next
+        return results
+    def search_greater(self, key):
+     """Retorna todos los records con clave > key."""
+     results = []
+     node = self.root
+     if node is None:
+        return results
+     while not node.is_leaf:
+         node = node.children[0]
+     while node is not None:
+         for i, k in enumerate(node.keys):
+            if k > key:
+             results.append(node.records[i])
+         node = node.next
+     return results
+    
+    def search_less(self, key):
+        """Retorna todos los records con clave < key."""
+        results = []
+        node = self.root
+        if node is None:
+            return results
+        while not node.is_leaf:
+            node = node.children[0]
+        while node is not None:
+            for i, k in enumerate(node.keys):
+                if k < key:
+                    results.append(node.records[i])
+                else:
+                    return results
+            node = node.next
+        return results
+    
+    def get_all(self):
+        """Retorna todos los registros del árbol."""
+        results = []
+        node = self.root
+        if node is None:
+            return results
+        while not node.is_leaf:
+            node = node.children[0]
+        while node is not None:
+            results.extend(node.records)
+            node = node.next
+        return results
+       
 
 
                

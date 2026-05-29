@@ -31,11 +31,16 @@ class Catalog:
 
 
     
-    def load(self)-> None:
-        "Carga el catálogo desde un archivo JSON." 
-        with open(self.path, 'r',encoding='utf-8') as f:
-            self._tables = json.load(f)
-    
+    def load(self) -> None:
+     
+     """Carga el catálogo desde disco al iniciar el motor.
+     Si el archivo no existe, el catálogo arranca vacío."""
+
+     if not os.path.exists(self.path):
+        return  
+     with open(self.path, 'r', encoding='utf-8') as f:
+          self._tables = json.load(f)
+
     def save(self) -> None:
         print("Guardando catálogo en disco...")
         print(self._tables)
@@ -46,7 +51,7 @@ class Catalog:
     # REGISTRO Y ELIMINACIÓN
     # ══════════════════════════════════════════════════════════
 
-    def register_table(self, table_name: str, columns: list) -> None:
+    def register_table(self, table_name, columns):
         """
         Registra una tabla nueva en el catálogo.
 

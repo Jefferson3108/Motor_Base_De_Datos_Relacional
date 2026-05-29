@@ -7,6 +7,7 @@ import re
 
 TOKEN_TYPES = {
     'KEYWORD':    r'\b(SELECT|INSERT|UPDATE|DELETE|FROM|WHERE|INTO|VALUES|SET|CREATE|DROP|TABLE|AND|OR)\b',
+    'BOOLEAN':    r'\b(true|false)\b',              # valores booleanos
     'IDENTIFIER': r'[a-zA-Z_][a-zA-Z0-9_]*',   # nombres de tablas y columnas
     'NUMBER':     r'\d+(\.\d+)?',               # enteros y decimales
     'STRING':     r"'[^']*'",                   # texto entre comillas simples

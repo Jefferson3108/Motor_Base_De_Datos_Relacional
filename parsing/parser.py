@@ -212,12 +212,15 @@ class Parser:
         if token.type == 'NUMBER':
             self.consume()
             return float(token.value) if '.' in token.value else int(token.value)
-        if token.type == 'STRING':
+        elif token.type == 'STRING':
             self.consume()
             return token.value.strip("'")   # quitar comillas
-        if token.type == 'IDENTIFIER':
+        elif token.type == 'IDENTIFIER':
             self.consume()
             return token.value
+        elif token.type == 'BOOLEAN':
+            self.consume()
+            return token.value.lower() == 'true'
         raise SyntaxError(f"Valor inesperado: '{token.value}' (tipo {token.type})")
 
     def parse_assignments(self):
@@ -261,6 +264,12 @@ class Parser:
         """
         self.consume('KEYWORD', 'WHERE')
         field    = self.consume('IDENTIFIER').value
+        if self.current() and self.current().type == 'BETWEEN':
+            self.consume('KEYWORD', 'BETWEEN')
+            value1   = self.parse_value()
+            self.consume('KEYWORD', 'AND')
+            value2   = self.parse_value()
+            return {'field': field, 'operator': operator, 'value1': value1, 'value2': value2}
         operator = self.consume('OPERATOR').value
         value    = self.parse_value()
         return {'field': field, 'operator': operator, 'value': value}
