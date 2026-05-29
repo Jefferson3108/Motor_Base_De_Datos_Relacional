@@ -42,8 +42,6 @@ class Catalog:
           self._tables = json.load(f)
 
     def save(self) -> None:
-        print("Guardando catálogo en disco...")
-        print(self._tables)
         with open(self.path, 'w', encoding='utf-8') as f:
              json.dump(self._tables, f, indent=2)
         
@@ -69,9 +67,7 @@ class Catalog:
         ValueError
             Si la tabla ya estaba registrada.
         """
-        print("REGISTER_TABLE INICIADO")
         print("TABLA:", table_name)
-        print("TABLES:", self._tables)
         if table_name in self._tables:
             raise ValueError(f"La tabla '{table_name}' ya existe en el catálogo.")
         self._tables[table_name] = columns

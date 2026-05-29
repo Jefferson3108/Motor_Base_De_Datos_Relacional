@@ -104,12 +104,19 @@ class DatabaseEngine:
             return f"[Error] CREATE TABLE requiere al menos una columna"
         if ast.columns[0]['type'].upper()!='INT':
             return f"[Error] La primera columna debe ser de tipo INT para ser la clave primaria"
-        self.tables[ast.table] = BPlusTree(order=50)
-        # registrar metadatos en el catálogo
-        self.buffers[ast.table] = BufferPool(f"data/{ast.table}.db")
-        self.catalog.register_table(ast.table, ast.columns)
+        try:
+         self.tables[ast.table] = BPlusTree(order=50)
+         # registrar metadatos en el catálogo
+         self.buffers[ast.table] = BufferPool(f"data/{ast.table}.db")
+         self.catalog.register_table(ast.table, ast.columns)
+         return f"Tabla '{ast.table}' creada exitosamente."
+        except Exception as e:
+            del self.tables[ast.table]
+            print(f"[Error al crear tabla] {e}")
+            import traceback
+            traceback.print_exc()
+            return f"[Error al crear tabla] {e}"
         
-        return f"Tabla '{ast.table}' creada exitosamente."
 
     def do_drop(self, ast):
         """
@@ -119,14 +126,23 @@ class DatabaseEngine:
         """
         if ast.table not in self.tables:
             return f"[Error] La tabla '{ast.table}' no existe"
-        del self.tables[ast.table]
-        if ast.table in self.buffers:
+        try:
+         del self.tables[ast.table]
+         if ast.table in self.buffers:
             del self.buffers[ast.table]
-        db_path = f"data/{ast.table}.db"
-        if os.path.exists(db_path):
-            os.remove(db_path)
-        self.catalog.drop_table(ast.table)
-        return f"Tabla '{ast.table}' eliminada."
+         db_path = f"data/{ast.table}.db"
+         if os.path.exists(db_path):
+             os.remove(db_path)
+         self.catalog.drop_table(ast.table)
+         return f"Tabla '{ast.table}' eliminada."
+        except Exception as e:
+            self.tables[ast.table] = BPlusTree(order=50)  # Restaurar el árbol en caso de error
+            self.buffers[ast.table] = BufferPool(f"data/{ast.table}.db")  # Restaurar el buffer
+            self.catalog.register_table(ast.table, [])  # Restaurar el catálogo con columnas vacías
+            print(f"[Error al eliminar tabla] {e}")
+            import traceback
+            traceback.print_exc()
+            return f"[Error al eliminar tabla] {e}"
 
     # ══════════════════════════════════════════════════════════
     # OPERACIONES CRUD
@@ -143,28 +159,45 @@ class DatabaseEngine:
         if ast.table not in self.tables:
             return f"[Error] La tabla '{ast.table}' no existe"
         existing=self.tables[ast.table].search(ast.values[0])
-        if existing is not None:
+        tree_inserted=False
+        page_inserted=False
+        try:
+         if existing is not None:
             return f"[Error] La clave primaria '{ast.values[0]}' ya existe en la tabla '{ast.table}'"
         
-        columns = self.catalog.get_columns(ast.table)
-        if len(ast.values) != len(columns):
+         columns = self.catalog.get_columns(ast.table)
+         if len(ast.values) != len(columns):
             return f"[Error] La tabla '{ast.table}' espera {len(columns)} valores, pero se recibieron {len(ast.values)}"
-        type_map={'INT': int, 'STR': str, 'FLOAT': float, 'BOOL': bool}
-        for i, col in enumerate(columns):
+         type_map={'INT': int, 'STR': str, 'FLOAT': float, 'BOOL': bool}
+         for i, col in enumerate(columns):
             col_name, col_type = col['name'], col['type']
             expected_type = type_map.get(col_type.upper())
             if expected_type and not isinstance(ast.values[i], expected_type):
              return f"[Error] El valor '{ast.values[i]}' no coincide con el tipo esperado {col_type} para la columna '{col_name}'"
 
-        key    = ast.values[0]   # clave primaria = primer campo
-        record = ast.values      # registro completo
-        self.tables[ast.table].insert(key, record)
-        page = self.buffers[ast.table].get_page_with_space(record)
-        self.buffers[ast.table].flush_page(page.page_id)
-        page.add_record(record)
-        print(f"Pagina {page.page_id} tiene ahora {page.records}")
-        self.buffers[ast.table].flush_page(page.page_id)
-        return f"1 registro insertado en '{ast.table}'."
+         key    = ast.values[0]   # clave primaria = primer campo
+         record = ast.values      # registro completo
+         self.tables[ast.table].insert(key, record)
+         tree_inserted=True
+         page = self.buffers[ast.table].get_page_with_space(record)
+         page.add_record(record)
+         page_inserted=True
+         self.buffers[ast.table].flush_page(page.page_id)
+         return f"1 registro insertado en '{ast.table}'."
+        except Exception as e:
+            if tree_inserted:
+                try:
+                 self.tables[ast.table].delete(ast.values[0])
+                except:
+                    pass
+            if page_inserted:
+                try:
+                 page.delete_record(ast.values)
+                 self.buffers[ast.table].flush_page(page.page_id)
+                except:
+                    pass
+            return f"[Error al insertar registro] {e}"
+
 
     def do_select(self, ast):
         """
@@ -219,12 +252,14 @@ class DatabaseEngine:
 
         if record is None:
             return f"0 registros actualizados (clave {key} no encontrada)."
+        try:
 
-        # Actualizar el primer valor del assignment
-        columns= self.catalog.get_columns(ast.table)
-        col_names= [col['name'] for col in columns]
-        new_record = list(record)  # convertir tupla a lista para modificar
-        for assignment in ast.assignments:
+         # Actualizar el primer valor del assignment
+         columns= self.catalog.get_columns(ast.table)
+         col_names= [col['name'] for col in columns]
+         old_record = list(record)
+         new_record = list(record)  # convertir tupla a lista para modificar
+         for assignment in ast.assignments:
             field = assignment['field']
             value = assignment['value']
             if field not in col_names:
@@ -232,8 +267,16 @@ class DatabaseEngine:
             idx = col_names.index(field)
             new_record[idx] = value
 
-        tree.update(key, new_record)
-        return f"1 registro actualizado en '{ast.table}'."
+         tree.update(key, new_record)
+         updated=True
+         return f"1 registro actualizado en '{ast.table}'."
+        except Exception as e:
+            if updated:
+                try:
+                 tree.update(key, old_record)  # Revertir al registro original
+                except:
+                    pass
+            return f"[Error al actualizar registro] {e}"
 
     def do_delete(self, ast):
         """
@@ -244,8 +287,20 @@ class DatabaseEngine:
             return f"[Error] La tabla '{ast.table}' no existe"
         if not ast.where:
             return "[Error] DELETE requiere una cláusula WHERE"
+        tree_deleted=False
+        try:
 
-        key = ast.where['value']
-        self.tables[ast.table].delete(key)
-        self.buffers[ast.table].flush_page(key)  # Asumiendo que la clave es el ID del registro
-        return f"Registro con clave {key} eliminado de '{ast.table}'."
+         key = ast.where['value']
+         record=self.tables[ast.table].search(key)
+         if record is None:
+            return f"0 registros eliminados (clave {key} no encontrada)."
+         self.tables[ast.table].delete(key)
+         tree_deleted=True
+         return f"Registro con clave {key} eliminado de '{ast.table}'."
+        except Exception as e:
+            if tree_deleted:
+                try:
+                    self.tables[ast.table].insert(key, record)
+                except:
+                    pass
+            return f"[Error al eliminar registro] {e}"

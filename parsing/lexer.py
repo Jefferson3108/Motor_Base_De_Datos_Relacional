@@ -6,7 +6,7 @@ import re
 # para que "SELECT" no sea clasificado como identificador.
 
 TOKEN_TYPES = {
-    'KEYWORD':    r'\b(SELECT|INSERT|UPDATE|DELETE|FROM|WHERE|INTO|VALUES|SET|CREATE|DROP|TABLE|AND|OR)\b',
+    'KEYWORD':    r'\b(SELECT|INSERT|UPDATE|DELETE|FROM|WHERE|INTO|VALUES|SET|CREATE|DROP|TABLE|AND|OR|BETWEEN)\b',
     'BOOLEAN':    r'\b(true|false)\b',              # valores booleanos
     'IDENTIFIER': r'[a-zA-Z_][a-zA-Z0-9_]*',   # nombres de tablas y columnas
     'NUMBER':     r'\d+(\.\d+)?',               # enteros y decimales

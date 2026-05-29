@@ -629,45 +629,54 @@ class BPlusTree:
      results = []
      node = self.root
      if node is None:
+        # El árbol está vacío, retornar lista vacía
         return results
      while not node.is_leaf:
+         # Descender por el hijo más a la izquierda
          node = node.children[0]
      while node is not None:
          for i, k in enumerate(node.keys):
             if k > key:
+             # Si la clave es mayor, agregar el registro a resultados
              results.append(node.records[i])
          node = node.next
-     return results
+     return results # Retorna todos los registros con clave > key
     
     def search_less(self, key):
         """Retorna todos los records con clave < key."""
         results = []
         node = self.root
+        # Descender hasta la hoja que podría contener key
         if node is None:
             return results
         while not node.is_leaf:
+            # Descender por el hijo más a la izquierda
             node = node.children[0]
         while node is not None:
             for i, k in enumerate(node.keys):
                 if k < key:
+                    # Si la clave es menor, agregar el registro a resultados
                     results.append(node.records[i])
                 else:
                     return results
             node = node.next
-        return results
+        return results # Retorna todos los registros con clave < key
     
     def get_all(self):
         """Retorna todos los registros del árbol."""
         results = []
         node = self.root
+        # Descender hasta la hoja más a la izquierda
         if node is None:
             return results
         while not node.is_leaf:
+            # Descender por el hijo más a la izquierda
             node = node.children[0]
         while node is not None:
+            # Agregar todos los registros de la hoja actual
             results.extend(node.records)
             node = node.next
-        return results
+        return results # Retorna todos los registros del árbol
        
 
 

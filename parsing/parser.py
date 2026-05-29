@@ -263,13 +263,13 @@ class Parser:
         Retorna dict: {'field': campo, 'operator': op, 'value': val}
         """
         self.consume('KEYWORD', 'WHERE')
-        field    = self.consume('IDENTIFIER').value
-        if self.current() and self.current().type == 'BETWEEN':
+        field = self.consume('IDENTIFIER').value
+        if self.current() and self.current().type == 'KEYWORD' and self.current().value == 'BETWEEN':
             self.consume('KEYWORD', 'BETWEEN')
             value1   = self.parse_value()
             self.consume('KEYWORD', 'AND')
             value2   = self.parse_value()
-            return {'field': field, 'operator': operator, 'value1': value1, 'value2': value2}
+            return {'field': field, 'operator': 'BETWEEN', 'value': (value1, value2)}
         operator = self.consume('OPERATOR').value
         value    = self.parse_value()
         return {'field': field, 'operator': operator, 'value': value}
