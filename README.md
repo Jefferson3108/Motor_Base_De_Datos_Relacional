@@ -22,49 +22,49 @@ Ejecutar los siguientes comandos en la terminal
 ## Ejemplos de comandos ##
 1. Para crear una tabla
 
-``CREATE TABLE estudiantes(Id int, nombre str, edad int)``
+- ``CREATE TABLE estudiantes(Id int, nombre str, edad int)``
 
-``CREATE TABLE materias(Id int, nombre str, creditos int, profesor str, activa bool)``  
+- ``CREATE TABLE materias(Id int, nombre str, creditos int, profesor str, activa bool)``  
 
 2. Para insertar un registro 
 
-``INSERT INTO estudiantes VALUES(1,Jaime,23)``
+- ``INSERT INTO estudiantes VALUES(1,Jaime,23)``
 
-``INSERT INTO materias VALUES(1,matematicas,3,Walter,true)``
+- ``INSERT INTO materias VALUES(1,matematicas,3,Walter,true)``
 
 3. Para consultar una tabla entera
 
-``SELECT * FROM estudiantes``
+- ``SELECT * FROM estudiantes``
 
-``SELECT * FROM materias``
+- ``SELECT * FROM materias``
 
 4. Para consultar un registro por id 
 
-``SELECT * FROM estudiantes WHERE id=1``
+- ``SELECT * FROM estudiantes WHERE id=1``
 
-``SELECT * FROM materias WHERE id=1``
+- ``SELECT * FROM materias WHERE id=1``
 
 5. Para actualizar un registro por id
 
-``UPDATE estudiantes set nombre= David WHERE id=1``
+- ``UPDATE estudiantes set nombre= David WHERE id=1``
 
-``UPDATE materias set creditos= 2 WHERE id=1``
+- ``UPDATE materias set creditos= 2 WHERE id=1``
 
 6. Para eliminar un registro por id
 
-``DELETE FROM estudiantes WHERE id=1``
+- ``DELETE FROM estudiantes WHERE id=1``
 
-``DELETE FROM materias WHERE id=1``
+- ``DELETE FROM materias WHERE id=1``
 
 7. Para eliminar un tabla
 
-``DROP TABLE estudiantes``
+- ``DROP TABLE estudiantes``
 
-``DROP TABLE materias``
+- ``DROP TABLE materias``
 
 8. Comando para salir
 
-``exit``
+- ``exit``
 
 
 
