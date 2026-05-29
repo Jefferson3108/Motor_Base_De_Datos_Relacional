@@ -1,5 +1,5 @@
 # Motor de base de datos usando arbol b+ #
-## 1. Integrantes##
+## 1. Integrantes ##
 Jefferson David Rico Ruiz 20242020108
 Kevin Sebastian Correo Buritica 20241020075
 Kevin Felipe Vargas Farfan 20242020259
